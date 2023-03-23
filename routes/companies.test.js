@@ -18,6 +18,58 @@ beforeEach(commonBeforeEach);
 afterEach(commonAfterEach);
 afterAll(commonAfterAll);
 
+/************************************** GET / */
+
+describe('GET /companies', () => {
+  test('returns all companies when no filters are applied', async () => {
+    const response = await request(app).get('/companies');
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.companies)).toBe(true);
+    expect(response.body.companies.length).toBeGreaterThan(0);
+  });
+
+  test('filters by company name when name parameter is provided', async () => {
+    const response = await request(app).get('/companies').query({ name: 'net' });
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.companies)).toBe(true);
+    expect(response.body.companies.length).toBeGreaterThan(0);
+    response.body.companies.forEach((company) => {
+      expect(company.name.toLowerCase()).toContain('net');
+    });
+  });
+
+  test('filters by minimum employees when minEmployees parameter is provided', async () => {
+    const response = await request(app).get('/companies').query({ minEmployees: 100 });
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.companies)).toBe(true);
+    expect(response.body.companies.length).toBeGreaterThan(0);
+    response.body.companies.forEach((company) => {
+      expect(company.numEmployees).toBeGreaterThanOrEqual(100);
+    });
+  });
+
+  test('filters by maximum employees when maxEmployees parameter is provided', async () => {
+    const response = await request(app).get('/companies').query({ maxEmployees: 50 });
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.companies)).toBe(true);
+    expect(response.body.companies.length).toBeGreaterThan(0);
+    response.body.companies.forEach((company) => {
+      expect(company.numEmployees).toBeLessThanOrEqual(50);
+    });
+  });
+
+  test('returns a 400 error with an appropriate message when minEmployees is greater than maxEmployees', async () => {
+    const response = await request(app).get('/companies').query({ minEmployees: 100, maxEmployees: 50 });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('minEmployees cannot be greater than maxEmployees');
+  });
+
+  test('returns a 400 error with an appropriate message when an invalid filter option is provided', async () => {
+    const response = await request(app).get('/companies').query({ foo: 'bar' });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Invalid filter option');
+  });
+});
 /************************************** POST /companies */
 
 describe("POST /companies", function () {

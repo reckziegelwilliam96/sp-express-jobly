@@ -15,6 +15,62 @@ beforeEach(commonBeforeEach);
 afterEach(commonAfterEach);
 afterAll(commonAfterAll);
 
+/************************************** get / */
+
+const Company = require('./company');
+
+describe('Company model', () => {
+  test('findAll returns all companies when no filters are applied', async () => {
+    const companies = await Company.findAll();
+    expect(companies.length).toBeGreaterThan(0);
+  });
+
+  test('findAll filters by company name when name parameter is provided', async () => {
+    const companies = await Company.findAll({ name: 'net' });
+    expect(companies.length).toBeGreaterThan(0);
+    companies.forEach((company) => {
+      expect(company.name.toLowerCase()).toContain('net');
+    });
+  });
+
+  test('findAll filters by minimum employees when minEmployees parameter is provided', async () => {
+    const companies = await Company.findAll({ minEmployees: 100 });
+    expect(companies.length).toBeGreaterThan(0);
+    companies.forEach((company) => {
+      expect(company.numEmployees).toBeGreaterThanOrEqual(100);
+    });
+  });
+
+  test('findAll filters by maximum employees when maxEmployees parameter is provided', async () => {
+    const companies = await Company.findAll({ maxEmployees: 50 });
+    expect(companies.length).toBeGreaterThan(0);
+    companies.forEach((company) => {
+      expect(company.numEmployees).toBeLessThanOrEqual(50);
+    });
+  });
+
+  test('findAll throws a 400 error when minEmployees is greater than maxEmployees', async () => {
+    await expect(Company.findAll({ minEmployees: 100, maxEmployees: 50 })).rejects.toThrow(
+      'Employee filter conflict'
+    );
+  });
+
+  test('findAll throws an error when the query is not any of the filter options', async () => {
+    await expect(Company.findAll({ foo: 'bar' })).rejects.toThrow('Invalid filter option');
+  });
+
+  test('findAll filters by all three parameters when all three parameters are provided', async () => {
+    const companies = await Company.findAll({ name: 'net', minEmployees: 100, maxEmployees: 1000 });
+    expect(companies.length).toBeGreaterThan(0);
+    companies.forEach((company) => {
+      expect(company.name.toLowerCase()).toContain('net');
+      expect(company.numEmployees).toBeGreaterThanOrEqual(100);
+      expect(company.numEmployees).toBeLessThanOrEqual(1000);
+    });
+  });
+});
+
+
 /************************************** create */
 
 describe("create", function () {
