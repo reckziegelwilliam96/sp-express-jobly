@@ -81,39 +81,70 @@ describe("POST /companies", function () {
     numEmployees: 10,
   };
 
-  test("ok for users", async function () {
-    const resp = await request(app)
-        .post("/companies")
-        .send(newCompany)
-        .set("authorization", `Bearer ${u1Token}`);
-    expect(resp.statusCode).toEqual(201);
-    expect(resp.body).toEqual({
-      company: newCompany,
+  test("admin can create company", async function () {
+    const token = jwt.sign({ username: "admin", is_admin: true }, SECRET_KEY);
+    const response = await request(app)
+      .post("/companies")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        newCompany
+      });
+      expect(response.statusCode).toBe(201);
+      expect(response.body).toEqual({
+        company: {
+          newCompany
+        },
+      });
     });
-  });
+
+    test("non-admin cannot create company", async function () {
+      const token = jwt.sign({ username: "user", is_admin: false }, SECRET_KEY);
+      const response = await request(app)
+        .post("/companies")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          handle: "new",
+          name: "New Company",
+          numEmployees: 10,
+        });
+    
+      expect(response.statusCode).toBe(401);
+      expect(response.body).toEqual({
+        error: { message: "Unauthorized" },
+      });
+    });
 
   test("bad request with missing data", async function () {
+    const token = jwt.sign({ username: "admin", is_admin: true }, SECRET_KEY);
     const resp = await request(app)
         .post("/companies")
+        .set("authorization", `Bearer ${token}`)
         .send({
           handle: "new",
           numEmployees: 10,
-        })
-        .set("authorization", `Bearer ${u1Token}`);
+        });
+        
     expect(resp.statusCode).toEqual(400);
   });
 
   test("bad request with invalid data", async function () {
     const resp = await request(app)
         .post("/companies")
+        .set("authorization", `Bearer ${u1Token}`)
         .send({
           ...newCompany,
           logoUrl: "not-a-url",
-        })
-        .set("authorization", `Bearer ${u1Token}`);
+        });
+        
     expect(resp.statusCode).toEqual(400);
   });
 });
+
+
+
+
+
+
 
 /************************************** GET /companies */
 
@@ -199,12 +230,18 @@ describe("GET /companies/:handle", function () {
 
 describe("PATCH /companies/:handle", function () {
   test("works for users", async function () {
+   
+  });
+  
+  test("admin can update company", async function () {
+    const token = jwt.sign({ username: "admin", is_admin: true }, SECRET_KEY);
+
     const resp = await request(app)
-        .patch(`/companies/c1`)
-        .send({
-          name: "C1-new",
-        })
-        .set("authorization", `Bearer ${u1Token}`);
+    .patch(`/companies/c1`)
+    .send({
+      name: "C1-new",
+    })
+    .set("authorization", `Bearer ${token}`);
     expect(resp.body).toEqual({
       company: {
         handle: "c1",
@@ -231,7 +268,7 @@ describe("PATCH /companies/:handle", function () {
         .send({
           name: "new nope",
         })
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${token}`);
     expect(resp.statusCode).toEqual(404);
   });
 
@@ -241,7 +278,7 @@ describe("PATCH /companies/:handle", function () {
         .send({
           handle: "c1-new",
         })
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${token}`);
     expect(resp.statusCode).toEqual(400);
   });
 
@@ -251,7 +288,7 @@ describe("PATCH /companies/:handle", function () {
         .send({
           logoUrl: "not-a-url",
         })
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${token}`);
     expect(resp.statusCode).toEqual(400);
   });
 });
@@ -259,10 +296,11 @@ describe("PATCH /companies/:handle", function () {
 /************************************** DELETE /companies/:handle */
 
 describe("DELETE /companies/:handle", function () {
-  test("works for users", async function () {
+  test("works for admin", async function () {
+    const token = jwt.sign({ username: "admin", is_admin: true }, SECRET_KEY);
     const resp = await request(app)
         .delete(`/companies/c1`)
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${token}`);
     expect(resp.body).toEqual({ deleted: "c1" });
   });
 
@@ -275,7 +313,27 @@ describe("DELETE /companies/:handle", function () {
   test("not found for no such company", async function () {
     const resp = await request(app)
         .delete(`/companies/nope`)
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${token}`);
     expect(resp.statusCode).toEqual(404);
   });
 });
+
+
+
+describe("PATCH /companies/:handle", function () {
+
+
+
+describe("DELETE /companies/:handle", function () {
+  test("admin can delete company", async function () {
+    const token = jwt.sign({ username: "admin", is_admin: true }, SECRET_KEY);
+
+    const response = await request(app)
+      .delete(`/companies/${TEST_DATA.company1.handle}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      deleted: TEST_DATA.company1.handle,
+    });
+  });

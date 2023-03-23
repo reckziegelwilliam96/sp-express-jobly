@@ -8,6 +8,7 @@ const User = require("../models/user");
 const express = require("express");
 const router = new express.Router();
 const { createToken } = require("../helpers/tokens");
+const { requireAdmin } = require("../middleware/auth");
 const userAuthSchema = require("../schemas/userAuth.json");
 const userRegisterSchema = require("../schemas/userRegister.json");
 const { BadRequestError } = require("../expressError");
@@ -43,10 +44,10 @@ router.post("/token", async function (req, res, next) {
  *
  * Returns JWT token which can be used to authenticate further requests.
  *
- * Authorization required: none
+ * Authorization required: admin
  */
 
-router.post("/register", async function (req, res, next) {
+router.post("/register", requireAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, userRegisterSchema);
     if (!validator.valid) {
