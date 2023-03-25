@@ -52,6 +52,13 @@ class Company {
   static async findAll(options = {}) {
       const { name, minEmployees, maxEmployees } = options;
       
+      const validFilters = ['name', 'minEmployees', 'maxEmployees'];
+      const invalidFilters = Object.keys(options).filter((filter) => !validFilters.includes(filter));
+
+      if (invalidFilters.length > 0) {
+        throw new ExpressError('Invalid filter option', 400);
+      }
+
       if (minEmployees > maxEmployees){
         throw new ExpressError('Employee filter conflict', 400);
       }
@@ -93,7 +100,7 @@ class Company {
         
       const companiesRes = await db.query(
             search, values);
-            
+
       return companiesRes.rows;
   }
 
@@ -107,16 +114,29 @@ class Company {
 
   static async get(handle) {
     const companyRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           WHERE handle = $1`,
+          `SELECT c.handle, c.name, c.description,
+                  c.num_employees AS "numEmployees",
+                  c.logo_url AS "logoUrl",
+                  j.id, j.title, j.salary, j.equity
+           FROM companies AS c
+           JOIN jobs AS j ON c.handle = j.company_handle
+           WHERE c.handle = $1`,
         [handle]);
 
-    const company = companyRes.rows[0];
+    const company = companyRes.rows.map(row => {
+      return {
+        name: row.name,
+        description: row.description,
+        num_employees: row.numEmployees,
+        logo_url: row.logoUrl,
+        jobs: {
+          id: row.id,
+          title: row.title,
+          salary: row.salary,
+          equity: row.equity
+        }
+      }
+    });
 
     if (!company) throw new NotFoundError(`No company: ${handle}`);
 
