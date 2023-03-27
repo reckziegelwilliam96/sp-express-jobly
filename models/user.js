@@ -96,6 +96,42 @@ class User {
     return user;
   }
 
+  static async apply(username, jobId) {
+    // Check if the user exists
+    const userResult = await db.query(
+      `SELECT username FROM users WHERE username = $1`, [username]
+    );
+    if (!userResult.rows[0]) {
+      throw new NotFoundError(`No user: ${username}`);
+    }
+  
+    // Check if the job exists
+    const jobResult = await db.query(
+      `SELECT id FROM jobs WHERE id = $1`, [jobId]
+    );
+    if (!jobResult.rows[0]) {
+      throw new NotFoundError(`No job: ${jobId}`);
+    }
+  
+    // Check if the application already exists
+    const existingResult = await db.query(
+      `SELECT username, job_id FROM applications WHERE username = $1 AND job_id = $2`,
+      [username, jobId]
+    );
+    if (existingResult.rows[0]) {
+      throw new BadRequestError(`Application already exists for user: ${username}, job: ${jobId}`);
+    }
+  
+    // Create the application
+    const applicationResult = await db.query(
+      `INSERT INTO applications (username, job_id) VALUES ($1, $2) RETURNING job_id`,
+      [username, jobId]
+    );
+    const applied = applicationResult.rows[0].job_id;
+  
+    return { applied };
+  }
+
   /** Find all users.
    *
    * Returns [{ username, first_name, last_name, email, is_admin }, ...]
@@ -123,22 +159,20 @@ class User {
    * Throws NotFoundError if user not found.
    **/
 
-  static async get(username) {
+   static async get(username) {
     const userRes = await db.query(
-          `SELECT username,
-                  first_name AS "firstName",
-                  last_name AS "lastName",
-                  email,
-                  is_admin AS "isAdmin"
-           FROM users
-           WHERE username = $1`,
-        [username],
+      `SELECT u.username, u.first_name AS "firstName", u.last_name AS "lastName", u.email, u.is_admin AS "isAdmin", ARRAY_AGG(a.job_id) AS jobs
+       FROM users AS u
+       LEFT JOIN applications AS a ON u.username = a.username
+       WHERE u.username = $1
+       GROUP BY u.username`,
+      [username],
     );
-
+  
     const user = userRes.rows[0];
-
+  
     if (!user) throw new NotFoundError(`No user: ${username}`);
-
+  
     return user;
   }
 

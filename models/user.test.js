@@ -105,6 +105,43 @@ describe("register", function () {
   });
 });
 
+/************************************** apply */
+
+describe('apply', function () {
+  test('works', async function () {
+    const application = await User.apply('u1', testJobIds[0]);
+    expect(application).toEqual({ applied: testJobIds[0] });
+  });
+
+  test('bad request with nonexistent user', async function () {
+    try {
+      await User.apply('no-such-user', testJobIds[0]);
+      fail();
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy();
+    }
+  });
+
+  test('bad request with nonexistent job', async function () {
+    try {
+      await User.apply(testUserIds[0], -1);
+      fail();
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy();
+    }
+  });
+
+  test('conflict if already applied', async function () {
+    try {
+      await User.apply('u1', testJobIds[0]);
+      await User.apply('u1', testJobIds[0]);
+      fail();
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy();
+    }
+  });
+});
+
 /************************************** findAll */
 
 describe("findAll", function () {
@@ -131,21 +168,21 @@ describe("findAll", function () {
 
 /************************************** get */
 
-describe("get", function () {
-  test("works", async function () {
-    let user = await User.get("u1");
+describe('get', function () {
+  test('works', async function () {
+    const user = await User.get('u1');
     expect(user).toEqual({
-      username: "u1",
-      firstName: "U1F",
-      lastName: "U1L",
-      email: "u1@email.com",
+      username: 'u1',
+      firstName: 'U1F',
+      lastName: 'U1L',
       isAdmin: false,
+      jobs: [testJobIds[0], testJobIds[1]],
     });
   });
 
-  test("not found if no such user", async function () {
+  test('not found if no such user', async function () {
     try {
-      await User.get("nope");
+      await User.get('no-such-user');
       fail();
     } catch (err) {
       expect(err instanceof NotFoundError).toBeTruthy();
